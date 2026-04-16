@@ -9,7 +9,10 @@ DYAMOND_BASE_URL = "https://nsdf-climate3-origin.nationalresearchplatform.org:50
 @dataclass(frozen=True)
 class DatasetSpec:
     variable: str
+    domain: str
+    long_name: str
     idx_path: str
+    has_depth: bool = True
 
     @property
     def url(self):
@@ -17,16 +20,32 @@ class DatasetSpec:
 
 
 _DATASET_SPECS = {
-    "salt": DatasetSpec("salt", "mit_output/llc2160_salt/salt_llc2160_x_y_depth.idx"),
-    "v": DatasetSpec("v", "mit_output/llc2160_v/v_llc2160_x_y_depth.idx"),
-    "theta": DatasetSpec("theta", "mit_output/llc2160_theta/llc2160_theta.idx"),
-    "w": DatasetSpec("w", "mit_output/llc2160_w/llc2160_w.idx"),
-    "u": DatasetSpec("u", "mit_output/llc2160_arco/visus.idx"),
+    "U": DatasetSpec("U", "atmosphere", "eastward wind", "https://maritime.sealstorage.io/api/visus/datasets/dyamond/U/visus.idx"),
+    "V": DatasetSpec("V", "atmosphere", "northward wind", "https://maritime.sealstorage.io/api/visus/datasets/dyamond/V/visus.idx"),
+    "P": DatasetSpec( "P", "atmosphere", "mid-level pressure", "https://maritime.sealstorage.io/api/visus/datasets/dyamond/P/visus.idx"),
+    "T": DatasetSpec("T", "atmosphere", "air temperature", "https://maritime.sealstorage.io/api/visus/datasets/dyamond/T/visus.idx"),
+    "theta": DatasetSpec("theta", "ocean", "sea-surface temperature", "mit_output/llc2160_theta/llc2160_theta.idx"),
+    "u": DatasetSpec("u", "ocean", "east-west velocity", "mit_output/llc2160_arco/visus.idx"),
+    "v": DatasetSpec("v", "ocean", "north-south velocity", "mit_output/llc2160_v/v_llc2160_x_y_depth.idx"),
+    "salt": DatasetSpec("salt", "ocean", "salinity", "mit_output/llc2160_salt/salt_llc2160_x_y_depth.idx"),
 }
 
+def available_variables(domain=None):
+    specs = list(_DATASET_SPECS.values())
+    if domain is not None:
+        specs = [s for s in specs if s.domain == domain]
+    return [s.variable for s in specs]
 
-def available_variables():
-    return list(_DATASET_SPECS.keys())
+
+def available_domains():
+    return sorted({spec.domain for spec in _DATASET_SPECS.values()})
+
+def is_atmospheric(variable):
+    return get_dataset_spec(variable).domain == "atmosphere"
+
+
+def is_oceanic(variable):
+    return get_dataset_spec(variable).domain == "ocean"
 
 
 def get_dataset_spec(variable):
