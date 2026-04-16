@@ -12,7 +12,6 @@ IBTRACS_BASE_URL = (
     "https://www.ncei.noaa.gov/data/international-best-track-archive-for-climate-stewardship-ibtracs"
 )
 
-
 def download_ibtracs_csv(
     output_path: str | Path,
     subset: str = "since1980",
@@ -22,9 +21,16 @@ def download_ibtracs_csv(
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    subset = _normalize_subset(subset)
-    filename = f"ibtracs.{subset}.list.{IBTRACS_VERSION}.csv.gz"
+    subset = subset.strip().lower()
+    if subset == "since1980":
+        filename = f"ibtracs.since1980.list.{IBTRACS_VERSION}.csv"
+    elif subset == "all":
+        filename = f"ibtracs.ALL.list.{IBTRACS_VERSION}.csv"
+    else:
+        raise ValueError(f"Unsupported subset: {subset!r}")
+
     url = f"{IBTRACS_BASE_URL}/{IBTRACS_VERSION}/access/csv/{filename}"
+    print("Downloading:", url)
 
     with requests.get(url, stream=True, timeout=timeout) as response:
         response.raise_for_status()
@@ -52,6 +58,32 @@ def read_ibtracs_csv(path: str | Path) -> pd.DataFrame:
         df["ISO_TIME"] = pd.to_datetime(df["ISO_TIME"], utc=True, errors="coerce")
 
     return df
+
+
+def _csv_filename(subset: str) -> str:
+    subset_to_name = {
+        "since1980": f"ibtracs.since1980.list.{IBTRACS_VERSION}.csv",
+        "all": f"ibtracs.ALL.list.{IBTRACS_VERSION}.csv",
+        "active": f"ibtracs.ACTIVE.list.{IBTRACS_VERSION}.csv",
+        "last3years": f"ibtracs.last3years.list.{IBTRACS_VERSION}.csv",
+        "na": f"ibtracs.NA.list.{IBTRACS_VERSION}.csv",
+        "ep": f"ibtracs.EP.list.{IBTRACS_VERSION}.csv",
+        "wp": f"ibtracs.WP.list.{IBTRACS_VERSION}.csv",
+        "ni": f"ibtracs.NI.list.{IBTRACS_VERSION}.csv",
+        "si": f"ibtracs.SI.list.{IBTRACS_VERSION}.csv",
+        "sp": f"ibtracs.SP.list.{IBTRACS_VERSION}.csv",
+        "sa": f"ibtracs.SA.list.{IBTRACS_VERSION}.csv",
+    }
+    try:
+        return subset_to_name[subset]
+    except KeyError as exc:
+        raise ValueError(
+            f"Unsupported subset {subset!r}. Valid options: {sorted(subset_to_name)}"
+        ) from exc
+
+
+def _normalize_subset(subset: str) -> str:
+    return subset.strip().lower()
 
 
 def clean_ibtracs(
@@ -206,14 +238,6 @@ def write_parquet(df: pd.DataFrame, path: str | Path, **kwargs: Any) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     df.to_parquet(path, index=False, **kwargs)
     return path
-
-
-def _normalize_subset(subset: str) -> str:
-    subset_norm = subset.strip().lower()
-    valid = {"all", "since1980"}
-    if subset_norm not in valid:
-        raise ValueError(f"Invalid subset {subset!r}. Valid options: {sorted(valid)}")
-    return subset_norm
 
 
 def _drop_header_repeat_rows(df: pd.DataFrame) -> pd.DataFrame:

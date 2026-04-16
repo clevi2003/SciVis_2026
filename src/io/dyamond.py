@@ -72,7 +72,7 @@ def dataset_summary(db):
     }
 
 
-def read_data(db, *, time, quality, x, y, z):
+def read_data(db, *, time=None, quality=None, x=None, y=None, z=None):
     kwargs = {}
     if time is not None:
         kwargs["time"] = int(time)
@@ -83,7 +83,10 @@ def read_data(db, *, time, quality, x, y, z):
     if y is not None:
         kwargs["y"] = list(y)
     if z is not None:
-        kwargs["z"] = z if isinstance(z, int) else list(z)
+        if isinstance(z, int):
+            kwargs["z"] = [z, z + 1]
+        else:
+            kwargs["z"] = list(z)
 
     return db.read(**kwargs)
     
